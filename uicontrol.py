@@ -27,5 +27,7 @@ class UIList(UIControl):
         item_left = self.left  # Same as list control
         item_top = self.top + (self.item_height * num)  # Calculate top of list item based on list top + item heights
         item_width = self.right - self.left  # Same as the list's width
-        assert item_top < self.bottom
+        if item_top > self.bottom:
+            raise ValueError('Item requested is out of view')
+
         return (item_left, item_top, item_width, self.item_height)

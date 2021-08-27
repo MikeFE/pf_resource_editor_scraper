@@ -1,6 +1,7 @@
 rpk/
 old/
 images/
+debug/
 .vscode/
 .venv/
 __pycache__/
