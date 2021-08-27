@@ -10,9 +10,9 @@ import pytesseract
 from pywinauto.application import Application
 from PIL import Image
 
-from uiconfig import *
+from config import *
 
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+pytesseract.pytesseract.tesseract_cmd = TESSERACT_PATH
 
 def is_item_modded(region):
     if wait_on_image_located(image='images/modded.tiff', region=region):
