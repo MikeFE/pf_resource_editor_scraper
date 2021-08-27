@@ -4,10 +4,14 @@ import time
 import cv2
 import numpy
 import os
+import sys
+import json
+import subprocess
 
 import pyautogui as ui
 import pytesseract
 from pywinauto.application import Application
+from pywinauto.findbestmatch import MatchError
 from PIL import Image
 
 from config import *
@@ -211,31 +215,51 @@ def scrape_cur_type():
     return clean_ocr_text(type_name)
     #cv2.imwrite('images/debug/type.tiff', get_cv2_screenshot(resource_type.get_region()))
 
+def read_type_id_from_rpk(path):
+    """ Use our separate rpk parser script to lift the type ID from the file """
+    type_id = subprocess.check_output(['../rpkparser/venv/Scripts/python.exe', '../rpkparser/parser.py', path])
+    return type_id.decode().strip('\r\n')
+
 def scrape_types():
+    OUTPUT_FILE = os.path.join(os.getcwd(), 'debug/test.rpk')
+    all_ids = []
+
     click_item(resource_type.get_region(), f=ui.doubleClick)
     ui.moveRel(0, 100)
     time.sleep(2)
 
-    for n in range(0, 1000):
+    for n in range(0, 5000):
         ui.press('down')
-        time.sleep(1)
-        #ui.hotkey('ctrl', 's')
+        ui.hotkey('ctrl', 's')  # Save RPK with the new resource type so we can scrape the ID from the file
+        time.sleep(2)
 
-        t = scrape_cur_type()
+        type_id = read_type_id_from_rpk(OUTPUT_FILE)
+        type_name = scrape_cur_type()
+        output = 'Type: `{}` Id: `{}`'.format(type_name, type_id)
+        all_ids.append((type_name, type_id))
+
         f = open('debug/restypes.txt', 'a')
-        print(t, file=f)
+        print(output)
+        print(output, file=f)
         f.close()
-        print('Type:', t)
-        if t.find('Sector Effect Settings') != -1:
+
+        if type_name.find('Sector Effect Settings') != -1:
             print('Got end of types')
             break
 
-app = Application().connect(best_match='ResourceEd')
-window = app.top_window()
-window.minimize()
-window.maximize()
+    with open('debug/type_ids.json', 'w') as f:
+        json.dump(all_ids, f)
 
-window.set_focus()
+try:
+    app = Application().connect(best_match='ResourceEd')
+    window = app.top_window()
+    window.minimize()
+    window.maximize()
+
+    window.set_focus()
+except MatchError as e:
+    print('Please ensure the Resource Editor is running')
+    sys.exit()
 
 scrape_types()
 
