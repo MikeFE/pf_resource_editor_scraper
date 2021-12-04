@@ -10,9 +10,12 @@ import subprocess
 
 import pyautogui as ui
 import pytesseract
+
 from pywinauto.application import Application
 from pywinauto.findbestmatch import MatchError
 from PIL import Image
+from base64 import urlsafe_b64encode
+from shutil import copyfile
 
 from config import *
 
@@ -221,7 +224,9 @@ def read_type_id_from_rpk(path):
     return type_id.decode().strip('\r\n')
 
 def scrape_types():
-    OUTPUT_FILE = os.path.join(os.getcwd(), 'debug/test.rpk')
+    OUTPUT_BASE_FILE = os.path.join(os.getcwd(), 'debug/alltypes/type.rpk')
+    OUTPUT_FILE_FMT = os.path.join(os.getcwd(), 'debug/alltypes/typenum{}-{}.rpk')
+
     all_ids = []
 
     click_item(resource_type.get_region(), f=ui.doubleClick)
@@ -229,26 +234,20 @@ def scrape_types():
     time.sleep(2)
 
     for n in range(0, 5000):
-        ui.press('down')
-        ui.hotkey('ctrl', 's')  # Save RPK with the new resource type so we can scrape the ID from the file
-        time.sleep(2)
-
-        type_id = read_type_id_from_rpk(OUTPUT_FILE)
         type_name = scrape_cur_type()
-        output = 'Type: `{}` Id: `{}`'.format(type_name, type_id)
-        all_ids.append((type_name, type_id))
+        print('Got type `{}`'.format(type_name))
 
-        f = open('debug/restypes.txt', 'a')
-        print(output)
-        print(output, file=f)
-        f.close()
+        # Copy temporary file to a new file for this type with its type name base64 encoded in the filename.
+        copyfile(OUTPUT_BASE_FILE, OUTPUT_FILE_FMT.format(1 + n, urlsafe_b64encode(type_name.encode('utf8')).decode('utf8')))
 
         if type_name.find('Sector Effect Settings') != -1:
             print('Got end of types')
             break
 
-    with open('debug/type_ids.json', 'w') as f:
-        json.dump(all_ids, f)
+        # Scroll down resource type list & save file per type
+        ui.press('down')
+        ui.hotkey('ctrl', 's')  # Save RPK with the new resource type so we can scrape the ID from the file
+        time.sleep(2)
 
 try:
     app = Application().connect(best_match='ResourceEd')
